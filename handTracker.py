@@ -25,17 +25,28 @@ class HandTracker():
         return img
 
     def getPostion(self, img, handNo = 0, draw=True):
-        lmList =[]
-        if self.results.multi_hand_landmarks:
-            myHand = self.results.multi_hand_landmarks[handNo]
-            for lm in myHand.landmark:
-                h, w, c = img.shape
-                cx, cy = int(lm.x*w), int(lm.y*h)
-                lmList.append((cx, cy))
+        # lmList =[]
+        hands_positions=[]
 
+        if self.results.multi_hand_landmarks:
+            for handNo, handLms in enumerate(self.results.multi_hand_landmarks):
+                # myHand = self.results.multi_hand_landmarks[handNo]
+                lmList= []
+                for id,lm in enumerate(handLms.landmark):
+                    h, w, c = img.shape
+                    cx, cy = int(lm.x*w), int(lm.y*h)
+                    lmList.append((cx, cy))
+
+                    if draw:
+                        cv2.circle(img, (cx, cy), 5, (255,0,255), cv2.FILLED)
+                hands_positions.append(lmList)
                 if draw:
-                    cv2.circle(img, (cx, cy), 5, (255,0,255), cv2.FILLED)
-        return lmList
+                    for connection in self.mpHands.HAND_CONNECTIONS:
+                        start_idx, end_idx = connection
+                        start_point = lmList[start_idx]
+                        end_point = lmList[end_idx]
+                        cv2.line(img,start_point,end_point,(255,0,255),2)
+        return hands_positions
 
     def getUpFingers(self, img):
         pos = self.getPostion(img, draw=False)
