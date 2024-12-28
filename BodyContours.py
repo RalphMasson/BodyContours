@@ -1,4 +1,5 @@
 import cv2
+from handTracker import *
 import mediapipe as mp
 import numpy as np
 mp_drawing = mp.solutions.drawing_utils
@@ -51,12 +52,10 @@ def body_contour(path_file):
                                         mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
             if results_face.multi_face_landmarks:
                 for face_landmarks in results_face.multi_face_landmarks:
-                    # Loop through each of the 468 (or 478) landmarks
                     for idx, landmark in enumerate(face_landmarks.landmark):
-                        # Denormalize the x and y coordinates by multiplying by the actual width and height
-                        x_pixel = int(landmark.x * image_width)   # Denormalize x using the width (e.g., 1920)
-                        y_pixel = int(landmark.y * image_height)  # Denormalize y using the height (e.g., 1080)
-                        cv2.circle(image_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)  # Green color, radius 2
+                        x_pixel = int(landmark.x * image_width)
+                        y_pixel = int(landmark.y * image_height)
+                        cv2.circle(image_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)
 
             cv2.drawContours(image_copy, contours, -1, (0, 255, 0), 2)
             cv2.namedWindow('win_name', cv2.WINDOW_NORMAL)
@@ -77,16 +76,24 @@ def body_contour_video(path_video):
         return
 
     with mp_selfie_segmentation.SelfieSegmentation(model_selection=0) as selfie_segmentation:
+        frame_counter = 0
+        frame_skip = 2  # Traiter une image sur deux
         while cap.isOpened():
             ret, frame = cap.read()
+            frame = cv2.resize(frame, (frame.shape[1] // 2, frame.shape[0] // 2))
+
             if not ret:
                 break
 
+            if frame_counter % frame_skip != 0:
+                frame_counter += 1
+                continue
 
+            frame_counter += 1
             detector = HandTracker(detectionCon=1)
-
             image_height, image_width, _ = frame.shape
-            results = selfie_segmentation.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+            results = selfie_segmentation.process(RGB_img)
             condition = np.stack((results.segmentation_mask,) * 3, axis=-1) > 0.4
             fg_image = np.zeros(frame.shape, dtype=np.uint8)
             fg_image[:] = MASK_COLOR
@@ -104,9 +111,8 @@ def body_contour_video(path_video):
             positions = detector.getPostion(frame_copy, draw=True)
             upFingers = detector.getUpFingers(frame_copy)
             output_img = frame.copy()
-            RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
             results = pose_img.process(RGB_img)
-            RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+            # RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
             results_face = face_mesh.process(RGB_img)
             landmarks_c=(234,63,247)
             connection_c=(117,249,77)
@@ -118,19 +124,12 @@ def body_contour_video(path_video):
                                         mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
             if results_face.multi_face_landmarks:
                 for face_landmarks in results_face.multi_face_landmarks:
-                    # Loop through each of the 468 (or 478) landmarks
                     for idx, landmark in enumerate(face_landmarks.landmark):
-                        # Denormalize the x and y coordinates by multiplying by the actual width and height
-                        x_pixel = int(landmark.x * image_width)   # Denormalize x using the width (e.g., 1920)
-                        y_pixel = int(landmark.y * image_height)  # Denormalize y using the height (e.g., 1080)
-                        cv2.circle(frame_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)  # Green color, radius 2
-
+                        x_pixel = int(landmark.x * image_width)
+                        y_pixel = int(landmark.y * image_height)
+                        cv2.circle(frame_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)
             cv2.drawContours(frame_copy, contours, -1, (0, 255, 0), 2)
-
-            # Afficher la vidéo en temps réel
             cv2.imshow('Body Contour Video', frame_copy)
-
-            # Quitter avec la touche 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
