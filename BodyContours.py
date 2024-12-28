@@ -9,6 +9,8 @@ pose_img = mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.5, mo
 pose_video = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5,
                           min_tracking_confidence=0.5, model_complexity=1)
 
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5)
 
 def body_contour(path_file):
     IMAGE_FILES = [path_file]
@@ -37,6 +39,8 @@ def body_contour(path_file):
             output_img = image.copy()
             RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
             results = pose_img.process(RGB_img)
+            RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+            results_face = face_mesh.process(RGB_img)
             landmarks_c=(234,63,247)
             connection_c=(117,249,77)
             thickness=10
@@ -45,6 +49,15 @@ def body_contour(path_file):
                 mp_drawing.draw_landmarks(image_copy, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
                                         mp_drawing.DrawingSpec(landmarks_c, thickness, circle_r),
                                         mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
+            if results_face.multi_face_landmarks:
+                for face_landmarks in results_face.multi_face_landmarks:
+                    # Loop through each of the 468 (or 478) landmarks
+                    for idx, landmark in enumerate(face_landmarks.landmark):
+                        # Denormalize the x and y coordinates by multiplying by the actual width and height
+                        x_pixel = int(landmark.x * image_width)   # Denormalize x using the width (e.g., 1920)
+                        y_pixel = int(landmark.y * image_height)  # Denormalize y using the height (e.g., 1080)
+                        cv2.circle(image_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)  # Green color, radius 2
+
             cv2.drawContours(image_copy, contours, -1, (0, 255, 0), 2)
             cv2.namedWindow('win_name', cv2.WINDOW_NORMAL)
             cv2.moveWindow('win_name', 0, 0)
@@ -58,7 +71,7 @@ def body_contour_video(path_video):
     MASK_COLOR = (255, 255, 255)  # white
 
     cap = cv2.VideoCapture(path_video)
-    cap = cv2.VideoCapture('rtsp://admin:admin@192.168.1.24:1935')
+    # cap = cv2.VideoCapture('rtsp://admin:admin@192.168.1.24:1935')
     if not cap.isOpened():
         print(f"Erreur : Impossible d'ouvrir la vidéo {path_video}")
         return
@@ -86,6 +99,8 @@ def body_contour_video(path_video):
             output_img = frame.copy()
             RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
             results = pose_img.process(RGB_img)
+            RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+            results_face = face_mesh.process(RGB_img)
             landmarks_c=(234,63,247)
             connection_c=(117,249,77)
             thickness=10
@@ -94,6 +109,15 @@ def body_contour_video(path_video):
                 mp_drawing.draw_landmarks(frame_copy, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
                                         mp_drawing.DrawingSpec(landmarks_c, thickness, circle_r),
                                         mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
+            if results_face.multi_face_landmarks:
+                for face_landmarks in results_face.multi_face_landmarks:
+                    # Loop through each of the 468 (or 478) landmarks
+                    for idx, landmark in enumerate(face_landmarks.landmark):
+                        # Denormalize the x and y coordinates by multiplying by the actual width and height
+                        x_pixel = int(landmark.x * image_width)   # Denormalize x using the width (e.g., 1920)
+                        y_pixel = int(landmark.y * image_height)  # Denormalize y using the height (e.g., 1080)
+                        cv2.circle(frame_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)  # Green color, radius 2
+
             cv2.drawContours(frame_copy, contours, -1, (0, 255, 0), 2)
 
             # Afficher la vidéo en temps réel
