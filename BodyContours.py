@@ -82,6 +82,9 @@ def body_contour_video(path_video):
             if not ret:
                 break
 
+
+            detector = HandTracker(detectionCon=1)
+
             image_height, image_width, _ = frame.shape
             results = selfie_segmentation.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             condition = np.stack((results.segmentation_mask,) * 3, axis=-1) > 0.4
@@ -95,7 +98,11 @@ def body_contour_video(path_video):
             contours, _ = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
             frame_copy = frame.copy()
+            detector.findHands(frame_copy)
+
             frame_copy = np.zeros(frame.shape,dtype=np.uint8)
+            positions = detector.getPostion(frame_copy, draw=True)
+            upFingers = detector.getUpFingers(frame_copy)
             output_img = frame.copy()
             RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
             results = pose_img.process(RGB_img)
