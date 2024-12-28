@@ -39,17 +39,31 @@ def body_contour(path_file):
             image_copy = np.zeros(image.shape,dtype=np.uint8)
             output_img = image.copy()
             RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
-            results = pose_img.process(RGB_img)
-            RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+            # results1 = pose_img.process(RGB_img)
+            # RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
             results_face = face_mesh.process(RGB_img)
             landmarks_c=(234,63,247)
             connection_c=(117,249,77)
             thickness=10
             circle_r=8
-            if results.pose_landmarks:
-                mp_drawing.draw_landmarks(image_copy, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                                        mp_drawing.DrawingSpec(landmarks_c, thickness, circle_r),
-                                        mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
+            # if results1.pose_landmarks:
+                # mp_drawing.draw_landmarks(image_copy, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                                        # mp_drawing.DrawingSpec(landmarks_c, thickness, circle_r),
+                                        # mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
+                # landmarks = results.pose_landmarks.landmark
+                # points_to_draw =  [0,11,12,23,24]
+                # connections_to_draw = [(11,12),(11,23),(12,24)]
+                # for idx in points_to_draw:
+                #     cx,cy=int(landmarks[idx].x*frame_copy.shape[1]),int(landmarks[idx].y*frame_copy.shape[0])
+                #     cv2.circle(frame_copy,(cx,cy),circle_r,landmarks_c,-1)
+                #
+                # for connection in connections_to_draw:
+                #     start_idx,end_idx=connection
+                #     start_point = (int(int(landmarks[start_idx].x*frame_copy.shape[1])),int(landmarks[start_idx].y*frame_copy.shape[0]))
+                #     end_point = (int(int(landmarks[end_idx].x*frame_copy.shape[1])),int(landmarks[end_idx].y*frame_copy.shape[0]))
+                #     cv2.line(frame_copy,start_point,end_point,connection_c,thickness)
+
+
             if results_face.multi_face_landmarks:
                 for face_landmarks in results_face.multi_face_landmarks:
                     for idx, landmark in enumerate(face_landmarks.landmark):
@@ -69,7 +83,7 @@ def body_contour_video(path_video):
     BG_COLOR = (0, 0, 0)  # black
     MASK_COLOR = (255, 255, 255)  # white
 
-    cap = cv2.VideoCapture(path_video)
+    cap = cv2.VideoCapture(0)
     # cap = cv2.VideoCapture('rtsp://admin:admin@192.168.1.24:1935')
     if not cap.isOpened():
         print(f"Erreur : Impossible d'ouvrir la vidéo {path_video}")
@@ -77,10 +91,9 @@ def body_contour_video(path_video):
 
     with mp_selfie_segmentation.SelfieSegmentation(model_selection=0) as selfie_segmentation:
         frame_counter = 0
-        frame_skip = 2  # Traiter une image sur deux
+        frame_skip = 20  # Traiter une image sur deux
         while cap.isOpened():
             ret, frame = cap.read()
-            frame = cv2.resize(frame, (frame.shape[1] // 2, frame.shape[0] // 2))
 
             if not ret:
                 break
@@ -88,11 +101,13 @@ def body_contour_video(path_video):
             if frame_counter % frame_skip != 0:
                 frame_counter += 1
                 continue
+            frame = cv2.resize(frame, (frame.shape[1] // 2, frame.shape[0] // 2))
 
+            # print(frame_counter)
             frame_counter += 1
             detector = HandTracker(detectionCon=1)
             image_height, image_width, _ = frame.shape
-            RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+            RGB_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = selfie_segmentation.process(RGB_img)
             condition = np.stack((results.segmentation_mask,) * 3, axis=-1) > 0.4
             fg_image = np.zeros(frame.shape, dtype=np.uint8)
@@ -109,25 +124,40 @@ def body_contour_video(path_video):
 
             frame_copy = np.zeros(frame.shape,dtype=np.uint8)
             positions = detector.getPostion(frame_copy, draw=True)
-            upFingers = detector.getUpFingers(frame_copy)
+            # upFingers = detector.getUpFingers(frame_copy)
             output_img = frame.copy()
             results = pose_img.process(RGB_img)
             # RGB_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
-            results_face = face_mesh.process(RGB_img)
+            # results_face = face_mesh.process(RGB_img)
             landmarks_c=(234,63,247)
             connection_c=(117,249,77)
-            thickness=10
-            circle_r=8
+            thickness=2
+            circle_r=2
             if results.pose_landmarks:
-                mp_drawing.draw_landmarks(frame_copy, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                                        mp_drawing.DrawingSpec(landmarks_c, thickness, circle_r),
-                                        mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
-            if results_face.multi_face_landmarks:
-                for face_landmarks in results_face.multi_face_landmarks:
-                    for idx, landmark in enumerate(face_landmarks.landmark):
-                        x_pixel = int(landmark.x * image_width)
-                        y_pixel = int(landmark.y * image_height)
-                        cv2.circle(frame_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)
+                # mp_drawing.draw_landmarks(frame_copy, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                                        # mp_drawing.DrawingSpec(landmarks_c, thickness, circle_r),
+                                        # mp_drawing.DrawingSpec(connection_c, thickness, circle_r))
+
+                landmarks = results.pose_landmarks.landmark
+                points_to_draw =  [0,11,12,23,24]
+                connections_to_draw = [(11,12),(11,23),(12,24),(23,24)]
+                for idx in points_to_draw:
+                    cx,cy=int(landmarks[idx].x*frame_copy.shape[1]),int(landmarks[idx].y*frame_copy.shape[0])
+                    cv2.circle(frame_copy,(cx,cy),circle_r,landmarks_c,-1)
+
+                for connection in connections_to_draw:
+                    start_idx,end_idx=connection
+                    start_point = (int(int(landmarks[start_idx].x*frame_copy.shape[1])),int(landmarks[start_idx].y*frame_copy.shape[0]))
+                    end_point = (int(int(landmarks[end_idx].x*frame_copy.shape[1])),int(landmarks[end_idx].y*frame_copy.shape[0]))
+                    cv2.line(frame_copy,start_point,end_point,connection_c,thickness)
+
+            # if results_face.multi_face_landmarks:
+            #     for face_landmarks in results_face.multi_face_landkmarks:
+            #         for idx, landmark in enumerate(face_landmarks.landmark):
+            #             x_pixel = int(landmark.x * image_width)
+            #             y_pixel = int(landmark.y * image_height)
+            #             cv2.circle(frame_copy, (x_pixel, y_pixel), 2, (0, 255, 0), -1)
+
             cv2.drawContours(frame_copy, contours, -1, (0, 255, 0), 2)
             cv2.imshow('Body Contour Video', frame_copy)
             if cv2.waitKey(1) & 0xFF == ord('q'):
